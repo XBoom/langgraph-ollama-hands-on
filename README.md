@@ -6,7 +6,8 @@
 > 版本（源码读签名确认，2026-11-17）：langgraph **1.2.22** / langchain **1.5.0** /
 > langchain-core 1.8.1 / langchain-ollama 1.1.0 / langchain-mcp-adapters / Python 3.12.14
 
-**分支约定**：提交纪律以 WorkSpace `AGENTS.md`「Git Flow 闸门」+ skill `git-flow` 为准（给人看的 CONTRIBUTING 已去掉）。
+**分支约定**：提交纪律以 WorkSpace `AGENTS.md`「Git Flow 闸门」+ skill `git-flow` 为准。  
+**消息协议**：`HumanMessage` / `AIMessage` / `ToolMessage` 等角色与状态约定见 [docs/消息协议.md](./docs/消息协议.md)。
 
 ---
 
@@ -39,6 +40,8 @@ langgraph-ollama-hands-on/
 │   └── eval_run.py    # 真 Agent 跑评估
 ├── tests/             # 15 单元 + 1 真 Ollama 集成
 ├── traces/            # 运行产生的 JSONL 轨迹
+├── docs/
+│   └── 消息协议.md    # HumanMessage 等消息类型与 Agent 状态协议
 └── README.md
 ```
 
