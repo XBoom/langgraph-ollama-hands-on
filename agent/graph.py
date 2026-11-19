@@ -21,9 +21,10 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import (
     AgentMiddleware,
     SummarizationMiddleware,
+    after_model,
     before_model,
 )
-from langchain_core.messages import AnyMessage, BaseMessage, SystemMessage
+from langchain_core.messages import AIMessage, AnyMessage, BaseMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
 
 from agent.tools import calculator, get_weather
@@ -58,34 +59,52 @@ class TraceHook:
 
     def __call__(self, state: dict[str, Any]) -> dict[str, list[AnyMessage]]:
         messages: list[BaseMessage] = state.get("messages", [])
-        self._write_trace(messages)
+        self._write_trace(messages, phase="before_model")
         return {"messages": self._compact(messages)}
 
-    def _write_trace(self, messages: list[BaseMessage]) -> None:
-        trace = {
+    def _write_trace(
+        self,
+        messages: list[BaseMessage],
+        *,
+        phase: str = "before_model",
+    ) -> None:
+        last = messages[-1] if messages else None
+        trace: dict[str, Any] = {
+            "phase": phase,
             "msg_count": len(messages),
-            "last_role": messages[-1].type if messages else None,
-            "last_content": str(messages[-1].content)[:200] if messages else None,
+            "last_role": last.type if last else None,
+            "last_content": str(last.content)[:200] if last else None,
         }
+        if isinstance(last, AIMessage):
+            tool_calls = getattr(last, "tool_calls", None) or []
+            if tool_calls:
+                trace["tool_calls"] = [
+                    {"name": c.get("name"), "id": c.get("id")} for c in tool_calls
+                ]
         self.trace_path.parent.mkdir(parents=True, exist_ok=True)
         with self.trace_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(trace, ensure_ascii=False) + "\n")
 
 
-def make_trace_middleware(trace_path: str) -> AgentMiddleware:
-    """新 API 中间件：每次调用模型前追加一行 JSONL。
+def make_trace_middleware(trace_path: str) -> list[AgentMiddleware]:
+    """新 API 中间件：模型调用前/后各追加一行 JSONL（含 AI 回复）。
 
-    这是官方扩展点，替代旧的 pre_model_hook。用装饰器写法，声明式且可与其他
-    middleware 组合。
+    这是官方扩展点，替代旧的 pre/post_model_hook。返回两个 middleware，供
+    `create_agent(..., middleware=...)` 展开使用。
     """
     hook = TraceHook(trace_path)
 
     @before_model
     def trace_before_model(state: dict[str, Any], runtime: Any = None) -> dict[str, Any] | None:
-        hook._write_trace(state.get("messages", []))
+        hook._write_trace(state.get("messages", []), phase="before_model")
         return None  # 不改写 state；压缩交给 SummarizationMiddleware
 
-    return trace_before_model
+    @after_model
+    def trace_after_model(state: dict[str, Any], runtime: Any = None) -> dict[str, Any] | None:
+        hook._write_trace(state.get("messages", []), phase="after_model")
+        return None
+
+    return [trace_before_model, trace_after_model]
 
 
 def build_agent(
@@ -104,7 +123,7 @@ def build_agent(
     """
     middleware: list[AgentMiddleware] = []
     if trace_path:
-        middleware.append(make_trace_middleware(trace_path))
+        middleware.extend(make_trace_middleware(trace_path))
     if summarizer is not None:
         middleware.append(
             SummarizationMiddleware(

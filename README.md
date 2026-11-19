@@ -71,7 +71,7 @@ langgraph-ollama-hands-on/
 1. `create_agent`：LangChain 1.x 官方 API（旧 `create_react_agent` 已弃用）。
 2. `MemorySaver`：短期/会话记忆；不同 `thread_id` 状态隔离，可用 `get_state` 回放。
 3. middleware：
-   - `make_trace_middleware`：`@before_model` 写 JSONL（替代旧 `pre_model_hook`）
+   - `make_trace_middleware`：`@before_model` / `@after_model` 写 JSONL（含 AI 回复）
    - `SummarizationMiddleware`：消息数达阈值时摘要压缩（`trigger` / `keep`）
 4. `build_default_agent()`：接本地 Ollama `http://127.0.0.1:11434`，默认 trace → `traces/agent.jsonl`。
 
@@ -113,7 +113,7 @@ langgraph-ollama-hands-on/
 | `agent/graph.py` | ReAct 图、`create_agent`、middleware | `system_prompt` + tools；压缩用 `SummarizationMiddleware` |
 | `MemorySaver` + `thread_id` | 短期记忆、会话隔离 | 不同 thread 状态不串；`get_state` 可回放 |
 | `config.recursion_limit` | 图递归上限 / 死循环熔断 | 必须放 config **顶层**；超限抛 `GraphRecursionError` |
-| `TraceHook` / `make_trace_middleware` | 可观测性、上下文裁剪 | `@before_model` 写 JSONL；middleware 是官方扩展点 |
+| `TraceHook` / `make_trace_middleware` | 可观测性、上下文裁剪 | `@before_model` + `@after_model` 写 JSONL（含 AI）；middleware 是官方扩展点 |
 | `mcp_server.py` + `mcp_client.py` | MCP 协议、运行时工具发现 | stdio FastMCP；`get_tools()` 动态列出 |
 | `mcp_demo.py` | 本地工具与 MCP 工具混合 | Function Calling 与 MCP 可同图；MCP 须 `ainvoke` |
 | `eval.py` + `eval_run.py` | 黄金集、确定性检查、LLM-judge | 参数比对归一化空白；两层评测分离 |

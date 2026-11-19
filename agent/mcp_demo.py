@@ -35,7 +35,7 @@ async def main() -> None:
         tools=all_tools,
         system_prompt=DEFAULT_SYSTEM_PROMPT
         + " 查政策知识库用 lookup_docs（主题 refund / shipping）。",
-        middleware=[make_trace_middleware(TRACE)],
+        middleware=make_trace_middleware(TRACE),
     )
     cfg = {"configurable": {"thread_id": "mcp-demo"}, "recursion_limit": 15}
     for q in ["退款政策是什么？", "用计算器算 (7+3)*5"]:
