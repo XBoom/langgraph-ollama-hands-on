@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
@@ -42,11 +42,34 @@ TOOLS = [calculator, get_weather]
 # demo / 默认路径共用，便于 CLI 打印本轮新增 trace 行
 DEFAULT_TRACE_PATH = Path(__file__).resolve().parent.parent / "traces" / "agent.jsonl"
 
+# 行为约束；具体工具名从 TOOLS / 调用方传入的 tools 自动生成，避免每加工具改提示词。
 DEFAULT_SYSTEM_PROMPT = (
-    "你是一个简洁的助手。可用工具：calculator（算术）、get_weather（天气）。"
+    "你是一个简洁的助手。"
     "需要精确计算或实时数据时必须调用工具，不要凭记忆猜。"
     "回答尽量短，直接给结论。"
 )
+
+
+def format_tools_for_prompt(tools: Sequence[Any]) -> str:
+    """从工具的 name + description 生成提示词片段（取 description 首行）。"""
+    if not tools:
+        return "当前未挂载任何工具。"
+    lines: list[str] = ["可用工具："]
+    for tool in tools:
+        name = getattr(tool, "name", None) or getattr(tool, "__name__", str(tool))
+        raw = (getattr(tool, "description", None) or "").strip()
+        desc = raw.split("\n", 1)[0].strip() if raw else ""
+        lines.append(f"- {name}：{desc}" if desc else f"- {name}")
+    return "\n".join(lines)
+
+
+def compose_system_prompt(
+    base: str = DEFAULT_SYSTEM_PROMPT,
+    tools: Sequence[Any] | None = None,
+) -> str:
+    """行为提示 + 动态工具清单。新增工具只需改 tools 列表，不必改 base。"""
+    tool_list = TOOLS if tools is None else tools
+    return f"{base.rstrip()}\n\n{format_tools_for_prompt(tool_list)}"
 
 
 class TraceHook:
@@ -154,6 +177,7 @@ def build_agent(
     checkpointer: bool = True,
     trace_path: str | None = None,
     prompt: str = DEFAULT_SYSTEM_PROMPT,
+    tools: Sequence[Any] | None = None,
     max_messages: int | None = 20,
     summarizer: Any = None,
 ):
@@ -161,7 +185,9 @@ def build_agent(
 
     `llm` 由外部注入，方便测试用假模型；`summarizer` 可选（不传则不用摘要），
     供 SummarizationMiddleware 使用。
+    `tools` 默认用模块级 TOOLS；system_prompt 会按工具列表自动拼接清单。
     """
+    tool_list = list(TOOLS if tools is None else tools)
     middleware: list[AgentMiddleware] = []
     if trace_path:
         middleware.extend(make_trace_middleware(trace_path))
@@ -176,8 +202,8 @@ def build_agent(
 
     return create_agent(
         model=llm,
-        tools=TOOLS,
-        system_prompt=prompt,
+        tools=tool_list,
+        system_prompt=compose_system_prompt(prompt, tool_list),
         checkpointer=MemorySaver() if checkpointer else None,
         middleware=middleware,
     )
