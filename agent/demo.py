@@ -13,10 +13,46 @@
 from __future__ import annotations
 
 import argparse
+import json
+from pathlib import Path
 
 from langchain_core.messages import HumanMessage
 
-from agent.graph import build_default_agent
+from agent.graph import DEFAULT_TRACE_PATH, build_default_agent
+
+
+def _print_new_trace_lines(trace_path: Path, offset: int) -> int:
+    """把本轮新追加的 JSONL 打到终端，方便对照 human/ai/tool/system 形状。"""
+    if not trace_path.exists():
+        return offset
+    data = trace_path.read_bytes()
+    chunk = data[offset:].decode("utf-8", errors="replace")
+    for line in chunk.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            print(f"  [trace] {line[:200]}")
+            continue
+        msg = row.get("message")
+        phase = row.get("phase")
+        if msg is None:
+            print(f"  [trace:{phase}] skipped={row.get('skipped')}")
+            continue
+        extra = ""
+        if msg.get("tool_calls"):
+            extra = f" tool_calls={msg['tool_calls']}"
+        elif msg.get("tool_call_id"):
+            extra = f" tool_call_id={msg['tool_call_id']} name={msg.get('name')}"
+        elif msg.get("role"):
+            extra = f" role={msg['role']}"
+        print(
+            f"  [trace:{phase}] type={msg.get('type')} "
+            f"content={str(msg.get('content'))[:120]!r}{extra}"
+        )
+    return len(data)
 
 
 def main() -> None:
@@ -29,7 +65,8 @@ def main() -> None:
         "configurable": {"thread_id": args.thread},
         "recursion_limit": 15,  # 熔断：防止工具调用死循环
     }
-    print(f"Agent ready (thread={args.thread}). 输入 q 退出。\n")
+    print(f"Agent ready (thread={args.thread}). 输入 q 退出。")
+    print(f"Trace → {DEFAULT_TRACE_PATH}（终端同步打印本轮新增行）\n")
 
     while True:
         user = input("你> ").strip()
@@ -37,6 +74,10 @@ def main() -> None:
             break
         if not user:
             continue
+
+        trace_offset = (
+            DEFAULT_TRACE_PATH.stat().st_size if DEFAULT_TRACE_PATH.exists() else 0
+        )
 
         # 流式输出，便于观察 Thought / Action / Observation 循环（可观测性）
         # stream_mode="updates" 时：middleware 节点常返回 payload=None（仅表示跑过）；
@@ -59,6 +100,8 @@ def main() -> None:
                     elif getattr(last, "tool_calls", None):
                         names = [c.get("name") for c in last.tool_calls]
                         print(f"  [ai] tool_calls={names}")
+
+        _print_new_trace_lines(DEFAULT_TRACE_PATH, trace_offset)
         print()
 
 
