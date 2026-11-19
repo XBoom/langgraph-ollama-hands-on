@@ -8,5 +8,6 @@
 | [tools.md](./tools.md) | Tool 是什么；LangGraph/`create_agent` 里 model↔tools 环与 Schema/`tool_calls` | `agent/graph.py` · `agent/demo.py` · `agent/tools.py` |
 | [mcp.md](./mcp.md) | MCP 是什么；与 Function Calling 正交；`tools/list`·`tools/call`·stdio 接入图 | `agent/mcp_server.py` · `mcp_client.py` · `mcp_demo.py` |
 | [rag.md](./rag.md) | RAG / Agentic 检索当 Tool；词法与 Ollama embedding | `agent/rag.py` · `rag_data/` · `rag_demo.py` · `tests/test_rag.py` |
+| [待办.md](./待办.md) | 仓内缺口与可选增强（盘点清单） | 状态表；做完改 `done` |
 
 约定：改协议行为先改代码，再改文档里的链接与一两句说明。
