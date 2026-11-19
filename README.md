@@ -6,6 +6,8 @@
 > 版本（源码读签名确认，2026-11-17）：langgraph **1.2.22** / langchain **1.5.0** /
 > langchain-core 1.8.1 / langchain-ollama 1.1.0 / langchain-mcp-adapters / Python 3.12.14
 
+**分支约定**：本仓使用 Git Flow。日常改动请从 `develop` 开 `feature/*`，不要直接提交到 `main` / `develop`。详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+
 ---
 
 ## 1. 覆盖的知识点
