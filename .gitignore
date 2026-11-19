@@ -17,3 +17,5 @@ htmlcov/
 .env
 .env.*
 !.env.example
+# 运行时 JSONL 轨迹（demo / eval / mcp 自动追加）
+traces/
