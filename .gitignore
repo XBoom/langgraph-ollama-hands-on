@@ -1,5 +1,7 @@
 .venv/
 .uv-cache/
+# Poetry 本地配置可覆盖；锁文件 poetry.lock 要提交
+.python-version
 .pytest_cache/
 __pycache__/
 *.py[cod]

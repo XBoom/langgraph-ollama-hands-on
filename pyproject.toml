@@ -1,8 +1,26 @@
-[project]
+[tool.poetry]
 name = "langgraph-ollama-hands-on"
 version = "0.1.0"
 description = "Minimal but production-shaped LangGraph + Ollama agent: memory, tools, loop guards, tracing."
-requires-python = ">=3.11"
+authors = ["Eric"]
+readme = "README.md"
+packages = [{ include = "agent" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+langchain = "1.5.0"
+langchain-core = "1.8.1"
+langchain-ollama = "1.1.0"
+langchain-mcp-adapters = "0.3.2"
+langgraph = "1.2.22"
+mcp = "1.30.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.2.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
