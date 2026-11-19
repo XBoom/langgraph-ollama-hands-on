@@ -1,8 +1,0 @@
-{"msg_count": 1, "last_role": "human", "last_content": "用计算器算 12*12"}
-{"msg_count": 3, "last_role": "tool", "last_content": "144"}
-{"msg_count": 1, "last_role": "human", "last_content": "北京今天天气怎么样？"}
-{"msg_count": 3, "last_role": "tool", "last_content": "{\"city\": \"北京\", \"temp_c\": 21, \"condition\": \"晴\"}"}
-{"msg_count": 1, "last_role": "human", "last_content": "用计算器算 12*12"}
-{"msg_count": 3, "last_role": "tool", "last_content": "144"}
-{"msg_count": 1, "last_role": "human", "last_content": "北京今天天气怎么样？"}
-{"msg_count": 3, "last_role": "tool", "last_content": "{\"city\": \"北京\", \"temp_c\": 21, \"condition\": \"晴\"}"}
