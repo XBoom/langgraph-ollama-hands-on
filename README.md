@@ -6,7 +6,7 @@
 > 版本（源码读签名确认，2026-11-17）：langgraph **1.2.22** / langchain **1.5.0** /
 > langchain-core 1.8.1 / langchain-ollama 1.1.0 / langchain-mcp-adapters / Python 3.12.14
 
-**分支约定**：全 WorkSpace Git Flow 闸门（`AGENTS.md` + skill `git-flow`）。本仓入口见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+**分支约定**：提交纪律以 WorkSpace `AGENTS.md`「Git Flow 闸门」+ skill `git-flow` 为准（给人看的 CONTRIBUTING 已去掉）。
 
 ---
 
