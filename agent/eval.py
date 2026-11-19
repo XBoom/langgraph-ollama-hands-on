@@ -119,4 +119,10 @@ GOLDEN_SET: list[EvalCase] = [
         expected_args={"city": "北京"},
         expected_answer_contains=["北京"],
     ),
+    EvalCase(
+        id="policy_rag_refund",
+        user_input="无理由退款的运费谁承担？请先检索政策再回答。",
+        expected_tool="retrieve_policy",
+        expected_answer_contains=["买家"],
+    ),
 ]

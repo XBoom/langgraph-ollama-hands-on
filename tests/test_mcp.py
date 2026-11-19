@@ -29,4 +29,19 @@ def test_mcp_tool_execution():
         for block in result
         if isinstance(block, dict) and block.get("type") == "text"
     )
-    assert "7 天无理由" in text
+    assert "7 天" in text and "退款" in text
+
+
+def test_mcp_policy_aligned_with_snippets():
+    from agent.policy_snippets import POLICY_BY_TOPIC
+
+    tools = discover_mcp_tools_sync()
+    lookup = next(t for t in tools if t.name == "lookup_docs")
+    for topic, expected in POLICY_BY_TOPIC.items():
+        result = asyncio.run(lookup.ainvoke({"topic": topic}))
+        text = "".join(
+            block.get("text", "")
+            for block in result
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+        assert text == expected

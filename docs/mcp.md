@@ -49,7 +49,7 @@ MCP 把契约抽成一层：Server 只实现 MCP；Host 只实现 MCP Client。�
 
 | | 普通业务 API | MCP |
 |---|---|---|
-| 契约长什么样 | 各家路径/字段不同（`/v1/weather` vs `/api/forecast`） | 统一：`tools/list`、`tools/call` + JSON Schema |
+| 契约长什么样 | 各家路径/字段不同（`/v1/weather` vs `/api/forecast`） | **对话语法**统一：`tools/list`、`tools/call` + JSON Schema（见下节：不是统一成一个域名） |
 | 宿主怎么接 | 为每个 API **写专用客户端代码** | 宿主实现 **一次** MCP Client；新能力多半是 **加一条 Server 配置** |
 | 模型怎么用 | API 不会自动变成 tool；要你手写包装成 `@tool` | Client `get_tools()` 后即可 `bind_tools` / 进 `create_agent` |
 | 发现 | 靠读文档、写死 URL | 运行时 list，工具增减可动态感知（视 Server 能力） |
@@ -61,14 +61,40 @@ MCP 把契约抽成一层：Server 只实现 MCP；Host 只实现 MCP Client。�
 - MCP 换掉的是 **「每个宿主为每个后端写一套插件」** 这一层，换成 **标准插头**。  
 - 所以：「别人要用，不用一个一个写对接代码」——指的是 **不用为 Cursor 写一版、为 LangGraph 再写一版天气 SDK**；**不是**「客户端零配置、自动看见全世界所有 Agent」。
 
-### 3.2 「不用一个一个配置」到底省了什么？
+### 3.2 「统一 tools/list」≠「全世界一个域名」
+
+这里的「统一」指的是 **协议台词相同**，不是 **网络地址收成一个 host**。分三层看就不会混：
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ ① Host ↔ MCP Server（MCP 层）                                │
+│    台词永远是：tools/list、tools/call + JSON Schema            │
+│    地址：每个 Server 仍各自配置（stdio 命令 / 各自的 MCP URL）   │
+├─────────────────────────────────────────────────────────────┤
+│ ② MCP Server ↔ 真实业务 API（实现层，Host 看不见）              │
+│    WeatherA Server → api.openweathermap.org                  │
+│    WeatherB Server → api.weatherapi.com                      │
+│    域名、路径、鉴权、字段名可以完全不同——被 Server 消化掉         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| 问题 | 答案 |
+|---|---|
+| `tools/list` 怎么能「统一」？ | 统一的是 **方法名与报文形状**（怎么列工具、怎么调、参数用 JSON Schema 描述），不是统一成 `https://one.example.com`。 |
+| 两家天气 API 域名不同怎么办？ | **正常**。各自（或同一个）MCP Server 内部去打不同域名；Host 只对 Server 说 `tools/call name=get_weather`。 |
+| 两个 Weather MCP Server 是不是还要配两个地址？ | **要。** Host 配置里仍是两条（两个 stdio/两个 MCP URL）。省的是「为每个域名写一套 SDK」，不是「只留一个域名」。 |
+| 能不能对外只暴露一个入口？ | 可以再加一层 **聚合网关 MCP Server**（一个地址，背后转发多家 API）；那是部署选择，不是协议自带「全球单域名」。 |
+
+对照本仓：`mcp_client` 里配的是「用哪个解释器跑 `mcp_server.py`」（一条 Server 配置），不是气象局的域名——演示 Server 不打外网；`lookup_docs` 返回的是 [`policy_snippets.py`](../agent/policy_snippets.py) 短摘要（与 `rag_data` 事实对齐，查找方式仍是键值而非向量）。
+
+### 3.3 「不用一个一个配置」到底省了什么？
 
 | 仍要做的 | 不必再做的 |
 |---|---|
-| 每个 **Host** 声明：我连接哪些 MCP Server（命令行/URL/鉴权） | 为每个 Host×每个工具源 **重写** 一套私有插件协议与调用代码 |
-| 运维上决定用哪一个天气 Server | 天气服务商为每个 Agent 产品各做一遍私有适配 |
+| 每个 **Host** 声明连哪些 MCP Server（命令/URL 仍可**多条**） | 为每个业务域名再写一套私有 REST 客户端/字段映射 |
+| Server 内部配置它要打的气象局域名与密钥 | 天气 API 厂商为每个 Agent 产品各做一遍私有插件 |
 
-省的是 **N×M 开发**，不是 **「连接关系」本身**——连谁仍然要配置（或由网关/目录统一下发）。
+省的是 **对接语法上的 N×M 开发**，不是「全世界收成一个域名」。
 
 ---
 

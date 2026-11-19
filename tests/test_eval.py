@@ -58,3 +58,31 @@ def test_judge_score_parsing():
 
 def test_judge_score_clamped():
     assert llm_judge("q", "a", lambda _: "1.5") == 1.0
+
+
+def test_golden_set_includes_rag_case():
+    ids = {c.id for c in GOLDEN_SET}
+    assert "policy_rag_refund" in ids
+    rag = next(c for c in GOLDEN_SET if c.id == "policy_rag_refund")
+    assert rag.expected_tool == "retrieve_policy"
+
+
+def test_check_deterministic_rag_case_shape():
+    case = next(c for c in GOLDEN_SET if c.id == "policy_rag_refund")
+    msgs = [
+        HumanMessage(case.user_input),
+        AIMessage(
+            "",
+            tool_calls=[
+                {
+                    "name": "retrieve_policy",
+                    "args": {"query": "无理由退款运费"},
+                    "id": "r1",
+                }
+            ],
+        ),
+        ToolMessage("[refund-2] 无理由退款由买家承担退回运费", tool_call_id="r1"),
+        AIMessage("根据政策，无理由退款运费由买家承担。"),
+    ]
+    tool_ok, answer_ok, detail = check_deterministic(case, msgs)
+    assert tool_ok and answer_ok, detail

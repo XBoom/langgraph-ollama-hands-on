@@ -53,9 +53,10 @@ poetry run pytest tests/test_rag.py -q
 |---|---|---|
 | 查找方式 | 向量相似（语义/词法） | 主题键精确匹配 |
 | 进程 | 与 Agent 同进程 | 独立 MCP Server |
+| 文案 | `rag_data/*.md` 长文切块 | [`policy_snippets.py`](../agent/policy_snippets.py) 短摘要 |
 | 用途 | 教 Agentic RAG | 教 MCP 发现/跨进程 |
 
-二者可同时存在；不要混为一谈。
+**同一套政策事实**：改退款/配送/质保时，先改 `policy_snippets` 与对应 `rag_data` 文件，避免两套真相。二者演示目的不同，可同仓并存。
 
 ---
 
