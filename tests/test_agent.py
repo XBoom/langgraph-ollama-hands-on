@@ -14,8 +14,8 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 
+from agent.graph import TraceHook, build_agent, compose_system_prompt, format_tools_for_prompt
 from agent.tools import calculator, get_weather
-from agent.graph import build_agent, TraceHook
 
 
 # ---------------------------------------------------------------------------
@@ -179,6 +179,22 @@ def test_compaction_trims_old_messages():
     trimmed = hook._compact(msgs)
     assert len(trimmed) <= 4
     assert trimmed[-1].content == "m9"
+
+
+def test_system_prompt_lists_tools_dynamically():
+    """提示词工具清单随 tools 变化，不必手写工具名。"""
+    block = format_tools_for_prompt([calculator, get_weather])
+    assert "calculator" in block and "get_weather" in block
+    assert "可用工具" in block
+
+    @tool
+    def ping() -> str:
+        """探活。"""
+        return "pong"
+
+    composed = compose_system_prompt("你是助手。", [ping])
+    assert "ping" in composed and "探活" in composed
+    assert "calculator" not in composed
 
 
 # ---------------------------------------------------------------------------
