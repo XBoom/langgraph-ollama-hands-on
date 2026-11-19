@@ -1,0 +1,10 @@
+{"msg_count": 1, "last_role": "human", "last_content": "用计算器算 12*12，然后只回复数字"}
+{"msg_count": 1, "last_role": "human", "last_content": "我叫小明，记住数字42"}
+{"msg_count": 3, "last_role": "human", "last_content": "我的数字是多少？"}
+{"msg_count": 5, "last_role": "human", "last_content": "用计算器算 42*2"}
+{"msg_count": 7, "last_role": "tool", "last_content": "84"}
+{"msg_count": 1, "last_role": "human", "last_content": "用计算器算 12*12，然后只回复数字"}
+{"msg_count": 1, "last_role": "human", "last_content": "用计算器算 12*12，然后只回复数字"}
+{"msg_count": 1, "last_role": "human", "last_content": "用计算器算 12*12，然后只回复数字"}
+{"msg_count": 1, "last_role": "human", "last_content": "用计算器算 12*12，然后只回复数字"}
+{"msg_count": 1, "last_role": "human", "last_content": "用计算器算 12*12，然后只回复数字"}

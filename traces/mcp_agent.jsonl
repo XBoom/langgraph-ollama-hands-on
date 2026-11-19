@@ -1,0 +1,4 @@
+{"msg_count": 1, "last_role": "human", "last_content": "退款政策是什么？"}
+{"msg_count": 3, "last_role": "tool", "last_content": "[{'type': 'text', 'text': '退款政策：7 天无理由，需保持商品完好，运费由买家承担。', 'id': 'lc_bfa846a3-dc2a-49aa-8374-56f8884b75a4'}]"}
+{"msg_count": 1, "last_role": "human", "last_content": "用计算器算 (7+3)*5"}
+{"msg_count": 3, "last_role": "tool", "last_content": "40"}
