@@ -39,18 +39,26 @@ def main() -> None:
             continue
 
         # 流式输出，便于观察 Thought / Action / Observation 循环（可观测性）
+        # stream_mode="updates" 时：middleware 节点常返回 payload=None（仅表示跑过）；
+        # create_agent 图里模型节点名是 "model"（不是旧版的 "agent"）。
         for step in agent.stream(
             {"messages": [HumanMessage(content=user)]}, cfg, stream_mode="updates"
         ):
             for node, payload in step.items():
-                msgs = payload.get("messages", [])
+                if not isinstance(payload, dict):
+                    continue
+                msgs = payload.get("messages") or []
                 if not msgs:
                     continue
                 last = msgs[-1]
                 if node == "tools":
                     print(f"  [tool] {last.name}: {str(last.content)[:120]}")
-                elif node == "agent" and last.type == "ai" and last.content:
-                    print(f"  [ai] {last.content[:200]}")
+                elif node in {"model", "agent"} and getattr(last, "type", None) == "ai":
+                    if last.content:
+                        print(f"  [ai] {str(last.content)[:200]}")
+                    elif getattr(last, "tool_calls", None):
+                        names = [c.get("name") for c in last.tool_calls]
+                        print(f"  [ai] tool_calls={names}")
         print()
 
 
