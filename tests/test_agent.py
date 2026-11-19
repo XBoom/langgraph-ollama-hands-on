@@ -197,6 +197,14 @@ def test_system_prompt_lists_tools_dynamically():
     assert "calculator" not in composed
 
 
+def test_local_tools_auto_registered():
+    """tools.py 里用 @tool 定义的工具应进入 get_tools，无需维护全局列表。"""
+    from agent.tools import get_tools
+
+    names = {t.name for t in get_tools()}
+    assert {"calculator", "get_weather"} <= names
+
+
 # ---------------------------------------------------------------------------
 # 集成（真实 Ollama）——显式用 -m integration 运行
 # ---------------------------------------------------------------------------

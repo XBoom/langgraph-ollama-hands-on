@@ -64,6 +64,7 @@ langgraph-ollama-hands-on/
 
 - `calculator`：用 `ast` 白名单解析算术表达式，不使用 `eval`/`exec`。
 - `get_weather`：离线 fixture（北京/上海），不依赖外网 API。
+- **注册**：本模块 `@tool` = LangChain tool + 自动写入注册表；`get_tools()` 供 `graph` 组装，**不必**再维护全局 `TOOLS = [...]`。
 - **知识点**：`@tool` 从 docstring + 类型注解生成 JSON Schema 给模型看；模型只发出结构化调用请求，真正执行在图侧 ToolNode，这是安全边界。
 
 ### `graph.py` — Agent 装配

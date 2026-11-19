@@ -19,14 +19,14 @@ from langchain_ollama import ChatOllama
 
 from agent.graph import DEFAULT_SYSTEM_PROMPT, compose_system_prompt, make_trace_middleware
 from agent.mcp_client import discover_mcp_tools
-from agent.tools import calculator, get_weather
+from agent.tools import get_tools
 
 TRACE = "traces/mcp_agent.jsonl"
 
 
 async def main() -> None:
     remote_tools = await discover_mcp_tools()
-    all_tools = [calculator, get_weather, *remote_tools]
+    all_tools = [*get_tools(), *remote_tools]
     print(f"Discovered {len(remote_tools)} MCP tool(s): {[t.name for t in remote_tools]}")
 
     llm = ChatOllama(model="qwen2.5:14b", temperature=0, base_url="http://127.0.0.1:11434")

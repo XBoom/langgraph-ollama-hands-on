@@ -1,10 +1,9 @@
 """Agent 可调用的工具。
 
 设计要点：
-- 工具就是带 docstring + 类型注解的 Python 函数；LangChain 据此生成 JSON Schema，
-  模型看到的就是这份 schema。
+- 用本模块的 `@tool` 装饰：内部仍是 LangChain `@tool`，并**自动注册**进仓库。
+- `get_tools()` 返回已注册列表；`graph.build_agent` 默认用它，不必再改全局 TOOLS。
 - 模型从不自己执行工具，只发出结构化调用请求；真正执行在图里的 ToolNode。
-  这是安全边界。
 - 绝不要把用户原文丢进 eval/exec。这里用 ast + 白名单语法做安全求值。
 """
 
@@ -13,8 +12,10 @@ from __future__ import annotations
 import ast
 import json
 import operator
+from typing import Any, Callable
 
-from langchain_core.tools import tool
+from langchain_core.tools import BaseTool
+from langchain_core.tools import tool as langchain_tool
 
 _ALLOWED_BINOPS = {
     ast.Add: operator.add,
@@ -25,6 +26,42 @@ _ALLOWED_BINOPS = {
     ast.Mod: operator.mod,
 }
 _ALLOWED_UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+
+# name -> BaseTool；由 @tool / register_tool 写入
+_REGISTRY: dict[str, BaseTool] = {}
+
+
+def register_tool(tool_obj: BaseTool) -> BaseTool:
+    """显式注册一个已构造好的 BaseTool（例如来自 MCP 适配后再并入本地仓）。"""
+    _REGISTRY[tool_obj.name] = tool_obj
+    return tool_obj
+
+
+def get_tools() -> list[BaseTool]:
+    """当前已注册的本地工具（稳定按 name 排序）。"""
+    return sorted(_REGISTRY.values(), key=lambda t: t.name)
+
+
+def clear_tools() -> None:
+    """仅供测试重置注册表。"""
+    _REGISTRY.clear()
+
+
+def tool(fn: Callable[..., Any] | None = None, **kwargs: Any):
+    """LangChain `@tool` + 自动 `register_tool`。
+
+    用法与官方一致：
+        @tool
+        def foo(...): ...
+    """
+
+    def deco(f: Callable[..., Any]) -> BaseTool:
+        built = langchain_tool(**kwargs)(f) if kwargs else langchain_tool(f)
+        return register_tool(built)
+
+    if fn is not None:
+        return deco(fn)
+    return deco
 
 
 def _safe_eval(node: ast.AST):
