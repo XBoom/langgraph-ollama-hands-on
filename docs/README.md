@@ -6,8 +6,9 @@
 |---|---|---|
 | [消息协议.md](./消息协议.md) | HumanMessage / 状态 / checkpointer / thread_id | `agent/demo.py` · `agent/graph.py` · `tests/fakes.py` |
 | [tools.md](./tools.md) | Tool 是什么；LangGraph/`create_agent` 里 model↔tools 环与 Schema/`tool_calls` | `agent/graph.py` · `agent/demo.py` · `agent/tools.py` |
-| [mcp.md](./mcp.md) | MCP 是什么；与 Function Calling 正交；`tools/list`·`tools/call`·stdio 接入图 | `agent/mcp_server.py` · `mcp_client.py` · `mcp_demo.py` |
-| [rag.md](./rag.md) | RAG / Agentic 检索当 Tool；词法与 Ollama embedding | `agent/rag.py` · `rag_data/` · `rag_demo.py` · `tests/test_rag.py` |
-| [待办.md](./待办.md) | 仓内缺口与可选增强（盘点清单） | 状态表；做完改 `done` |
+| [mcp.md](./mcp.md) | MCP；多 Server（docs+weather）；≠统一域名 | `mcp_server` · `mcp_weather_server` · `mcp_client` · `mcp_demo` |
+| [rag.md](./rag.md) | Agentic RAG；词法/Ollama；可选 JSON 持久化 | `agent/rag.py` · `rag_data/` · `rag_demo.py` |
+| [middleware与记忆评测.md](./middleware与记忆评测.md) | middleware、MemorySaver、熔断、eval | `graph.py` · `demo.py` · `eval.py` |
+| [待办.md](./待办.md) | 仓内缺口与可选增强 | 状态表 |
 
 约定：改协议行为先改代码，再改文档里的链接与一两句说明。

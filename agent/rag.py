@@ -4,13 +4,18 @@
 真语义检索：ensure_rag_registered(embeddings=\"ollama\")，需本机
 `ollama pull nomic-embed-text`。
 
-复用：[src: langchain InMemoryVectorStore + create_retriever_tool]
+持久化：可选 `persist_path` / 环境变量 `RAG_PERSIST_PATH`，使用
+InMemoryVectorStore.dump/load（JSON 落盘，无额外依赖）。
+默认仍内存重建——hands-on 更简单；生产可换 Chroma/pgvector。
+
+复用：[src: langchain InMemoryVectorStore + create_retriever_tool + dump/load]
 """
 
 from __future__ import annotations
 
 import hashlib
 import math
+import os
 import re
 from pathlib import Path
 from typing import Literal, Sequence
@@ -78,12 +83,34 @@ def load_corpus(data_dir: Path | None = None) -> list[Document]:
     return docs
 
 
+def _persist_file(persist_path: Path | str | None, embeddings: Embeddings) -> Path | None:
+    if persist_path is None:
+        return None
+    path = Path(persist_path)
+    if path.is_dir() or str(persist_path).endswith(("/", "\\")):
+        tag = type(embeddings).__name__.lower()
+        path = path / f"policy_{tag}.json"
+    return path
+
+
 def build_vectorstore(
     embeddings: Embeddings,
     documents: Sequence[Document] | None = None,
+    *,
+    persist_path: Path | str | None = None,
+    rebuild: bool = False,
 ) -> InMemoryVectorStore:
+    """建库；若 persist_path 存在且非 rebuild 则 load，否则 from_documents 并可 dump。"""
+    path = _persist_file(persist_path, embeddings)
+    if path is not None and path.exists() and not rebuild:
+        return InMemoryVectorStore.load(str(path), embedding=embeddings)
+
     docs = list(documents) if documents is not None else load_corpus()
-    return InMemoryVectorStore.from_documents(docs, embedding=embeddings)
+    store = InMemoryVectorStore.from_documents(docs, embedding=embeddings)
+    if path is not None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        store.dump(str(path))
+    return store
 
 
 def _resolve_embeddings(
@@ -108,10 +135,14 @@ def make_retrieve_tool(
     embeddings: Embeddings | Literal["lexical", "ollama"] = "lexical",
     k: int = 3,
     documents: Sequence[Document] | None = None,
+    persist_path: Path | str | None = None,
+    rebuild: bool = False,
 ) -> BaseTool:
     """构造检索工具（不自动注册）。返回带 [chunk_id] 前缀的片段文本。"""
     emb = _resolve_embeddings(embeddings)
-    store = build_vectorstore(emb, documents=documents)
+    store = build_vectorstore(
+        emb, documents=documents, persist_path=persist_path, rebuild=rebuild
+    )
     retriever = store.as_retriever(search_kwargs={"k": k})
     return create_retriever_tool(
         retriever,
@@ -132,16 +163,24 @@ def ensure_rag_registered(
     embeddings: Embeddings | Literal["lexical", "ollama"] = "lexical",
     k: int = 3,
     force: bool = False,
+    persist_path: Path | str | None = None,
+    rebuild: bool = False,
 ) -> BaseTool:
-    """注册 retrieve_policy 到本地工具仓；同配置幂等，force=True 可换 embedding。"""
+    """注册 retrieve_policy；persist_path 默认读环境变量 RAG_PERSIST_PATH（可空=纯内存）。"""
     global _registered_fingerprint
     emb = _resolve_embeddings(embeddings)
-    fp = f"{type(emb).__name__}:{k}"
+    if persist_path is None:
+        env = os.environ.get("RAG_PERSIST_PATH", "").strip()
+        persist_path = env or None
+    path = _persist_file(persist_path, emb)
+    fp = f"{type(emb).__name__}:{k}:{path}"
     existing = next((t for t in get_tools() if t.name == _RETRIEVE_NAME), None)
     if not force and _registered_fingerprint == fp and existing is not None:
         return existing
 
-    tool = make_retrieve_tool(embeddings=emb, k=k)
+    tool = make_retrieve_tool(
+        embeddings=emb, k=k, persist_path=path, rebuild=rebuild
+    )
     register_tool(tool)
     _registered_fingerprint = fp
     return tool
@@ -156,5 +195,5 @@ def format_hits_for_prompt(docs: Sequence[Document]) -> str:
     return "\n\n".join(parts)
 
 
-# import 本模块即注册默认（词法）检索工具，与 calculator 一样进 get_tools()
+# import 本模块即注册默认（词法、内存）；设 RAG_PERSIST_PATH 可改为落盘
 ensure_rag_registered(embeddings="lexical")

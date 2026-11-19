@@ -19,3 +19,5 @@ htmlcov/
 !.env.example
 # 运行时 JSONL 轨迹（demo / eval / mcp 自动追加）
 traces/
+# RAG 可选持久化向量 JSON（InMemoryVectorStore.dump）
+rag_store/

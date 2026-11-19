@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import ast
-import json
 import operator
 from typing import Any, Callable
 
@@ -93,13 +92,6 @@ def calculator(expression: str) -> str:
         return f"error: invalid expression ({exc})"
 
 
-# 离线假数据：测试与演示不依赖不稳定的外部天气 API。
-_WEATHER_FIXTURE = {
-    "北京": {"temp_c": 21, "condition": "晴"},
-    "上海": {"temp_c": 26, "condition": "多云"},
-}
-
-
 @tool
 def get_weather(city: str) -> str:
     """查询某城市今日天气。离线演示数据：北京 / 上海。
@@ -107,5 +99,6 @@ def get_weather(city: str) -> str:
     Args:
         city: 中文城市名，例如 "北京"。
     """
-    data = _WEATHER_FIXTURE.get(city, {"temp_c": 20, "condition": "未知"})
-    return json.dumps({"city": city, **data}, ensure_ascii=False)
+    from agent.weather_fixture import lookup_weather
+
+    return lookup_weather(city)
