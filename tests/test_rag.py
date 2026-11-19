@@ -43,6 +43,19 @@ def test_ensure_rag_registered_in_get_tools():
     assert "calculator" in names
 
 
+def test_vectorstore_persist_roundtrip(tmp_path):
+    from agent.rag import LexicalBagEmbedding, build_vectorstore
+
+    emb = LexicalBagEmbedding()
+    path = tmp_path / "store.json"
+    store1 = build_vectorstore(emb, persist_path=path, rebuild=True)
+    assert path.exists()
+    hits1 = store1.similarity_search("退款运费", k=1)
+    store2 = build_vectorstore(emb, persist_path=path, rebuild=False)
+    hits2 = store2.similarity_search("退款运费", k=1)
+    assert hits1[0].page_content == hits2[0].page_content
+
+
 def test_rag_corpus_mentions_shared_snippet_facts():
     """rag_data 长文须覆盖 policy_snippets 里的关键事实（避免两套真相）。"""
     from agent.policy_snippets import POLICY_BY_TOPIC

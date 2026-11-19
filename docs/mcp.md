@@ -131,13 +131,15 @@ MCP 把契约抽成一层：Server 只实现 MCP；Host 只实现 MCP Client。�
 
 ### 4.3 和本仓的对应
 
-本仓演示里：
+| 角色 | 本仓 |
+|---|---|
+| 政策 Server | `mcp_server.py` → `lookup_docs` |
+| 天气 Server | `mcp_weather_server.py` → `get_weather`（数据：`weather_fixture.py`） |
+| Host | `mcp_client.discover_mcp_tools("docs", "weather")` · `mcp_demo` |
 
-- `mcp_server.py` = **Server**（文档工具）  
-- `mcp_demo` / `mcp_client` = **Client（Host）**  
-- 本地 `get_weather` 甚至还在进程内 `@tool`，**没有**做成 MCP——若做成 MCP，也应是「一个 weather server」，多个 demo/Agent 去连它。
+`mcp_demo` 连 **两个** Server；本地去掉进程内 `get_weather`，避免与 MCP 工具同名。默认 `demo` / 单测仍可用进程内 `get_weather`（同源 fixture），不必起 MCP。
 
-**一句话**：MCP 让「天气」做成标准插头，**多个 Agent 共用一个插头**；不是「每个 Agent 自带一个插头，客户端再两两配置选哪个 Agent 的天气」。
+**一句话**：MCP 让「天气」做成标准插头，**多个 Host 共用一个 Weather Server**；不是每个 Agent 各做一个天气插头再让客户端两两选。
 
 ---
 

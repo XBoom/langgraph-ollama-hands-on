@@ -25,9 +25,14 @@ def main() -> None:
     if mode not in {"lexical", "ollama"}:
         raise SystemExit(f"RAG_EMBEDDINGS must be lexical|ollama, got {mode!r}")
 
-    ensure_rag_registered(embeddings=mode, force=True)  # type: ignore[arg-type]
+    persist = os.environ.get("RAG_PERSIST_PATH", "").strip() or None
+    ensure_rag_registered(
+        embeddings=mode,  # type: ignore[arg-type]
+        force=True,
+        persist_path=persist,
+    )
     names = [t.name for t in get_tools()]
-    print(f"embeddings={mode} tools={names}")
+    print(f"embeddings={mode} persist={persist or '(memory)'} tools={names}")
 
     llm = ChatOllama(
         model="qwen2.5:14b",

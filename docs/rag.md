@@ -42,10 +42,23 @@ poetry run python -m agent.rag_demo
 # 真语义（需 ollama pull nomic-embed-text）
 RAG_EMBEDDINGS=ollama poetry run python -m agent.rag_demo
 
+# 可选：向量库 JSON 落盘（InMemoryVectorStore.dump/load，目录已 gitignore）
+RAG_PERSIST_PATH=./rag_store poetry run python -m agent.rag_demo
+
 poetry run pytest tests/test_rag.py -q
 ```
 
-`import agent.graph` / `build_agent` 会侧效加载 `agent.rag`，默认注册词法版 `retrieve_policy`。
+`import agent.graph` / `build_agent` 会侧效加载 `agent.rag`，默认注册词法版 `retrieve_policy`（纯内存）。
+
+### 2.1b 持久化取舍
+
+| 模式 | 做法 | 何时用 |
+|---|---|---|
+| 默认内存 | 每次进程重建索引 | hands-on / 单测，零文件 |
+| `RAG_PERSIST_PATH` | `dump`/`load` JSON | 语料大、想少嵌一次；仍须同一 embedding |
+| 生产库 | Chroma / pgvector 等 | 多进程、增量更新、过滤——本仓不引入，以免依赖膨胀 |
+
+持久化的是**已算好的向量+文档**，不是「换一套向量数据库协议」；换 embedding 模型须 `rebuild=True` 或删掉旧文件。
 
 ### 2.2 和 MCP `lookup_docs` 的差别
 
