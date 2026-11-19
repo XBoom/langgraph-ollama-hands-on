@@ -108,6 +108,40 @@ def test_trace_hook_writes_jsonl(tmp_path):
     assert len(lines) == 1
     payload = json.loads(lines[0])
     assert "msg_count" in payload and payload["msg_count"] == 1
+    assert payload.get("phase") == "before_model"
+
+
+def test_trace_hook_writes_ai_after_model(tmp_path):
+    """模型调用后应记录 AI 回复（含纯文本与 tool_calls）。"""
+    from langchain_core.messages import AIMessage
+
+    trace_file = tmp_path / "trace.jsonl"
+    hook = TraceHook(trace_path=str(trace_file))
+    hook._write_trace(
+        [AIMessage(content="你叫小明。")],
+        phase="after_model",
+    )
+    hook._write_trace(
+        [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "get_weather",
+                        "args": {"city": "深圳"},
+                        "id": "c1",
+                        "type": "tool_call",
+                    }
+                ],
+            )
+        ],
+        phase="after_model",
+    )
+    lines = [json.loads(x) for x in trace_file.read_text().splitlines()]
+    assert lines[0]["phase"] == "after_model"
+    assert lines[0]["last_role"] == "ai"
+    assert lines[0]["last_content"] == "你叫小明。"
+    assert lines[1]["tool_calls"] == [{"name": "get_weather", "id": "c1"}]
 
 
 def test_compaction_trims_old_messages():
