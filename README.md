@@ -40,10 +40,9 @@ langgraph-ollama-hands-on/
 │   └── eval_run.py    # 真 Agent 跑评估
 ├── tests/             # 15 单元 + 1 真 Ollama 集成
 ├── traces/            # 运行产生的 JSONL 轨迹
-├── docs/              # 对照说明（依赖本仓；示例代码在 docs/examples/）
+├── docs/              # 对照说明（依赖本仓，指向 agent/ 代码）
 │   ├── README.md
-│   ├── 消息协议.md
-│   └── examples/
+│   └── 消息协议.md
 └── README.md
 ```
 
