@@ -109,18 +109,25 @@ def test_trace_hook_writes_jsonl(tmp_path):
     payload = json.loads(lines[0])
     assert "msg_count" in payload and payload["msg_count"] == 1
     assert payload.get("phase") == "before_model"
+    assert payload["message"]["type"] == "human"
+    assert payload["message"]["content"] == "hello"
 
 
-def test_trace_hook_writes_ai_after_model(tmp_path):
-    """模型调用后应记录 AI 回复（含纯文本与 tool_calls）。"""
-    from langchain_core.messages import AIMessage
+def test_trace_hook_serializes_message_types(tmp_path):
+    """除 FunctionMessage 外，human/ai/tool/system/chat 都应写入可辨形状。"""
+    from langchain_core.messages import (
+        AIMessage,
+        ChatMessage,
+        FunctionMessage,
+        SystemMessage,
+        ToolMessage,
+    )
 
     trace_file = tmp_path / "trace.jsonl"
     hook = TraceHook(trace_path=str(trace_file))
-    hook._write_trace(
-        [AIMessage(content="你叫小明。")],
-        phase="after_model",
-    )
+
+    hook._write_trace([SystemMessage("规矩")], phase="before_model")
+    hook._write_trace([HumanMessage("你好")], phase="before_model")
     hook._write_trace(
         [
             AIMessage(
@@ -137,11 +144,32 @@ def test_trace_hook_writes_ai_after_model(tmp_path):
         ],
         phase="after_model",
     )
+    hook._write_trace(
+        [ToolMessage(content='{"ok":1}', tool_call_id="c1", name="get_weather")],
+        phase="before_model",
+    )
+    hook._write_trace([AIMessage(content="你叫小明。")], phase="after_model")
+    hook._write_trace([ChatMessage(content="旁白", role="narrator")], phase="before_model")
+    # FunctionMessage 应被跳过（不写 message 字段 / 或整行标记 skipped）
+    hook._write_trace(
+        [FunctionMessage(name="legacy", content="x")],
+        phase="before_model",
+    )
+
     lines = [json.loads(x) for x in trace_file.read_text().splitlines()]
-    assert lines[0]["phase"] == "after_model"
-    assert lines[0]["last_role"] == "ai"
-    assert lines[0]["last_content"] == "你叫小明。"
-    assert lines[1]["tool_calls"] == [{"name": "get_weather", "id": "c1"}]
+    assert lines[0]["message"]["type"] == "system"
+    assert lines[1]["message"]["type"] == "human"
+    assert lines[2]["message"]["type"] == "ai"
+    assert lines[2]["message"]["tool_calls"] == [
+        {"name": "get_weather", "id": "c1", "args": {"city": "深圳"}}
+    ]
+    assert lines[3]["message"]["type"] == "tool"
+    assert lines[3]["message"]["tool_call_id"] == "c1"
+    assert lines[4]["message"]["content"] == "你叫小明。"
+    assert lines[5]["message"]["type"] == "chat"
+    assert lines[5]["message"]["role"] == "narrator"
+    assert lines[6]["message"] is None
+    assert lines[6]["skipped"] == "function"
 
 
 def test_compaction_trims_old_messages():

@@ -24,12 +24,23 @@ from langchain.agents.middleware import (
     after_model,
     before_model,
 )
-from langchain_core.messages import AIMessage, AnyMessage, BaseMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    AnyMessage,
+    BaseMessage,
+    ChatMessage,
+    FunctionMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langgraph.checkpoint.memory import MemorySaver
 
 from agent.tools import calculator, get_weather
 
 TOOLS = [calculator, get_weather]
+
+# demo / 默认路径共用，便于 CLI 打印本轮新增 trace 行
+DEFAULT_TRACE_PATH = Path(__file__).resolve().parent.parent / "traces" / "agent.jsonl"
 
 DEFAULT_SYSTEM_PROMPT = (
     "你是一个简洁的助手。可用工具：calculator（算术）、get_weather（天气）。"
@@ -62,6 +73,33 @@ class TraceHook:
         self._write_trace(messages, phase="before_model")
         return {"messages": self._compact(messages)}
 
+    @staticmethod
+    def _serialize_message(message: BaseMessage) -> dict[str, Any] | None:
+        """把消息收成可 JSON 的形状；FunctionMessage 返回 None（不记入 traces）。"""
+        if isinstance(message, FunctionMessage) or message.type == "function":
+            return None
+
+        payload: dict[str, Any] = {
+            "type": message.type,
+            "content": str(message.content)[:200],
+        }
+        if isinstance(message, AIMessage):
+            tool_calls = getattr(message, "tool_calls", None) or []
+            if tool_calls:
+                payload["tool_calls"] = [
+                    {"name": c.get("name"), "id": c.get("id"), "args": c.get("args")}
+                    for c in tool_calls
+                ]
+        elif isinstance(message, ToolMessage):
+            payload["name"] = message.name
+            payload["tool_call_id"] = message.tool_call_id
+            payload["status"] = getattr(message, "status", None)
+        elif isinstance(message, SystemMessage):
+            payload["name"] = message.name
+        elif isinstance(message, ChatMessage):
+            payload["role"] = message.role
+        return payload
+
     def _write_trace(
         self,
         messages: list[BaseMessage],
@@ -69,29 +107,32 @@ class TraceHook:
         phase: str = "before_model",
     ) -> None:
         last = messages[-1] if messages else None
+        serialized = self._serialize_message(last) if last is not None else None
         trace: dict[str, Any] = {
             "phase": phase,
             "msg_count": len(messages),
             "last_role": last.type if last else None,
             "last_content": str(last.content)[:200] if last else None,
+            "message": serialized,
         }
-        if isinstance(last, AIMessage):
-            tool_calls = getattr(last, "tool_calls", None) or []
-            if tool_calls:
-                trace["tool_calls"] = [
-                    {"name": c.get("name"), "id": c.get("id")} for c in tool_calls
-                ]
+        if last is not None and serialized is None:
+            trace["skipped"] = "function"
+        # 顺带带上当前线程里的 system（若有），方便对照人设是否进了 state
+        systems = [
+            s
+            for m in messages
+            if isinstance(m, SystemMessage) and (s := self._serialize_message(m))
+        ]
+        if systems:
+            trace["system_messages"] = systems
+
         self.trace_path.parent.mkdir(parents=True, exist_ok=True)
         with self.trace_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(trace, ensure_ascii=False) + "\n")
 
 
 def make_trace_middleware(trace_path: str) -> list[AgentMiddleware]:
-    """新 API 中间件：模型调用前/后各追加一行 JSONL（含 AI 回复）。
-
-    这是官方扩展点，替代旧的 pre/post_model_hook。返回两个 middleware，供
-    `create_agent(..., middleware=...)` 展开使用。
-    """
+    """模型调用前/后写 JSONL：human/ai/tool/system/chat（不含 FunctionMessage）。"""
     hook = TraceHook(trace_path)
 
     @before_model
@@ -152,8 +193,6 @@ def build_default_agent(trace_path: str | None = None):
         num_ctx=8192,
         base_url="http://127.0.0.1:11434",
     )
-    path = trace_path or str(
-        Path(__file__).resolve().parent.parent / "traces" / "agent.jsonl"
-    )
+    path = trace_path or str(DEFAULT_TRACE_PATH)
     # 生产环境可用更小/更便宜的摘要模型；这里同模型以保持全本地。
     return build_agent(llm=llm, checkpointer=True, trace_path=path, summarizer=llm)
