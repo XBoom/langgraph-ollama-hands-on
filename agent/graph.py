@@ -37,6 +37,9 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from agent.tools import get_tools
 
+# 侧效：注册 retrieve_policy（词法向量默认）；见 agent/rag.py / docs/rag.md
+import agent.rag  # noqa: F401
+
 # demo / 默认路径共用，便于 CLI 打印本轮新增 trace 行
 DEFAULT_TRACE_PATH = Path(__file__).resolve().parent.parent / "traces" / "agent.jsonl"
 

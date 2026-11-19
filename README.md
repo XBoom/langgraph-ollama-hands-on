@@ -7,7 +7,7 @@
 > langchain-core 1.8.1 / langchain-ollama 1.1.0 / langchain-mcp-adapters / Python 3.12.14
 
 **分支约定**：提交纪律以 WorkSpace `AGENTS.md`「Git Flow 闸门」+ skill `git-flow` 为准。  
-**消息协议**：概念说明见 [docs/消息协议.md](./docs/消息协议.md)（与代码对照，不独立发布）；索引 [docs/README.md](./docs/README.md)。
+**对照文档**：消息协议 / Tool / MCP / RAG 见 [docs/](./docs/)（与代码对照，不独立发布）；索引 [docs/README.md](./docs/README.md)。
 
 ---
 
@@ -21,6 +21,7 @@
 | 上下文压缩 | `SummarizationMiddleware`；另有 `TraceHook._compact` 做裁剪 |
 | 可观测性 | `@before_model` middleware 每次调模型前写 JSONL |
 | MCP | 独立进程 stdio 服务 + 运行时 `tools/list` 发现，可与本地 `@tool` 混用 |
+| Agentic RAG | `retrieve_policy`：语料切块 + 向量检索当 Tool（默认词法；可选 Ollama embedding） |
 | 评估闭环 | 黄金集 + 确定性检查 + 可选 LLM-as-judge |
 
 ---
@@ -36,13 +37,14 @@ langgraph-ollama-hands-on/
 │   ├── mcp_server.py  # FastMCP 服务（stdio，独立进程）
 │   ├── mcp_client.py  # 连接 MCP、运行时发现工具
 │   ├── mcp_demo.py    # 本地工具 + MCP 工具混合 Agent
+│   ├── rag.py         # Agentic RAG：切块 / 向量库 / retrieve_policy
+│   ├── rag_data/      # 政策语料（md）
+│   ├── rag_demo.py    # 检索当 Tool 的演示
 │   ├── eval.py        # 黄金集 + 确定性检查 / LLM-judge
 │   └── eval_run.py    # 真 Agent 跑评估
-├── tests/             # 15 单元 + 1 真 Ollama 集成
+├── tests/             # 单元 + 可选真 Ollama 集成
 ├── traces/            # 运行产生的 JSONL 轨迹
-├── docs/              # 对照说明（依赖本仓，指向 agent/ 代码）
-│   ├── README.md
-│   └── 消息协议.md
+├── docs/              # 对照说明（消息协议 / tools / MCP / RAG）
 └── README.md
 ```
 
@@ -146,6 +148,8 @@ poetry run python -m pytest -q                          # 全部 16 测试（15 
 poetry run python -m pytest -m 'not integration' -q     # 只跑 15 个单元测试（不需 Ollama）
 poetry run python -m agent.demo --thread demo           # 交互式：记忆 + 工具 + stream 可观测
 poetry run python -m agent.mcp_demo                     # MCP：独立进程工具动态发现 + 混合调用
+poetry run python -m agent.rag_demo                     # RAG：retrieve_policy（词法向量）
+# RAG_EMBEDDINGS=ollama poetry run python -m agent.rag_demo  # 需 nomic-embed-text
 poetry run python -m agent.eval_run                     # 黄金集评估（真 agent 跑真 case）
 ```
 
