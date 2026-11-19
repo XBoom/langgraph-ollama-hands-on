@@ -135,16 +135,19 @@ langgraph-ollama-hands-on/
 
 ## 6. 快速开始
 
-前提：本机 Ollama 在 `11434`，且已有 `qwen2.5:14b`（纯单元测试可不启）。
+前提：本机已装 [Poetry](https://python-poetry.org/)（≥2.x）；Ollama 在 `11434` 且已有 `qwen2.5:14b`（纯单元测试可不启）。
 
 ```bash
-cd 01-active/work_notes/ai-agents/langgraph-ollama-hands-on
-.venv/bin/python -m pytest -q                            # 全部 16 测试（15 单元 + 1 真 Ollama 集成）
-.venv/bin/python -m pytest -m 'not integration' -q       # 只跑 15 个单元测试（不需 Ollama）
-.venv/bin/python -m agent.demo --thread demo             # 交互式：记忆 + 工具 + stream 可观测
-.venv/bin/python -m agent.mcp_demo                       # MCP：独立进程工具动态发现 + 混合调用
-.venv/bin/python -m agent.eval_run                       # 黄金集评估（真 agent 跑真 case）
+cd /path/to/langgraph-ollama-hands-on
+poetry install                                          # 按 poetry.lock 建 .venv 并装依赖（含 dev/pytest）
+poetry run python -m pytest -q                          # 全部 16 测试（15 单元 + 1 真 Ollama 集成）
+poetry run python -m pytest -m 'not integration' -q     # 只跑 15 个单元测试（不需 Ollama）
+poetry run python -m agent.demo --thread demo           # 交互式：记忆 + 工具 + stream 可观测
+poetry run python -m agent.mcp_demo                     # MCP：独立进程工具动态发现 + 混合调用
+poetry run python -m agent.eval_run                     # 黄金集评估（真 agent 跑真 case）
 ```
+
+依赖由 **Poetry** 管理：`pyproject.toml` 声明版本，`poetry.lock` 锁定解析结果；虚拟环境默认在项目内 `.venv/`（见 `poetry.toml`）。增删依赖用 `poetry add` / `poetry add -G dev`，再提交更新后的 lock。
 
 ---
 
